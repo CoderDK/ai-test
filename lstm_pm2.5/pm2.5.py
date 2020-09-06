@@ -25,8 +25,10 @@ seq_len = 15
 input_s = 11
 layer_num = 1
 hidden_size = 20
-learn_rate = 0.001
-epoch_n = 40
+learn_rate = 0.00001
+epoch_n = 100
+epoch_t_n = 5
+log_file = "argumentInfo.txt"
 
 # 数据集加载
 filepath_train = 'PRSA_data_2010.1.1-2014.12.31_train.csv'
@@ -38,7 +40,7 @@ data_test = pd.read_csv(filepath_test,index_col=0)
 # 数据预处理
 # 'Is','cbwd','TEMP','year','month','day','hour','Ir','Iws','DEWP','PRES','pm2.5'
 dataset_train = data_train.loc[:,['Is','cbwd','TEMP','year','month','day','hour','Ir','Iws','DEWP','PRES','pm2.5']].values / 1000
-dataset_test = data_test.loc[:,['Is','cbwd','TEMP','year','month','day','hour','Ir','Iws','DEWP','PRES','pm2.5']].values / 1000
+dataset_test = data_test.loc[:,['Is','cbwd','TEMP','year','month','day','hour','Ir','Iws','DEWP','PRES','pm2.5']].head(50).values / 1000
 
 
 # split a multivariate sequence into samples
@@ -95,7 +97,7 @@ def train(model,train_x,train_y,test_x,test_y):
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        if epoch % 5 == 0 and epoch > 0:
+        if epoch % epoch_t_n == 0 and epoch > 0:
             test_loss = loss_fun(model(test_x), test_y)
             print("epoch:{}, loss:{}, test_loss: {}".format(epoch, loss, test_loss))
             train_loss_arr.append(loss)
@@ -107,16 +109,20 @@ def predict(model,test_y,test_x):
     model.eval()
     y = list(test_y*1000)
     y_p = list((model(test_x).data.reshape(-1))*1000)
+    
     plt.plot(y, label="real")
     # 原来的走势
     plt.plot(y_p, label="pred")
     # 模型预测的走势
     plt.legend(loc='best')
     plt.show()
+
     R_2_0 = metrics.r2_score(y, y_p)
+    mse = MSE(test_y,model(test_x).data.reshape(-1))
     print("R_2_0: ",R_2_0)
-    print("MSE评分：",MSE(test_y,model(test_x).data.reshape(-1)))
+    print("MSE评分：", mse)
     print("MSE评分2：",metrics.mean_squared_error(test_y,model(test_x).data.reshape(-1)))
+    return R_2_0,mse
 
 # 评分函数
 def MSE(y,y_p):
@@ -133,8 +139,14 @@ def main():
     train_loss_a,test_loss_a = train(model,train_x,train_y,test_x,test_y)
     lossLine(train_loss_a,test_loss_a)
     # 测试并评估模型
-    print("lstm参数：输入向量维度：%s lstm_layer: %s h_神经元：%s lr: %s" % (input_s,layer_num,hidden_size,learn_rate))
-    predict(model,test_y,test_x)
+    r_s,mse = predict(model,test_y,test_x)
+    info = "input_shpe: " + str(input_s) + \
+        " layer: " + str(layer_num) + \
+            " hidden: " + str(hidden_size) + " lr: " + str(learn_rate) + \
+                " epoch_n: " + str(epoch_n) + " epoch_t_n: " + str(epoch_t_n) + \
+                    " r_s: " + str(r_s) + " mse: " + str(mse) + "\n"
+    with open(log_file,'a') as f:
+        f.write(info)
 
 main()
 
