@@ -26,6 +26,7 @@ input_s = 11
 layer_num = 1
 hidden_size = 20
 learn_rate = 0.001
+epoch_n = 40
 
 # 数据集加载
 filepath_train = 'PRSA_data_2010.1.1-2014.12.31_train.csv'
@@ -88,7 +89,7 @@ def train(model,train_x,train_y,test_x,test_y):
     model.train()
     train_loss_arr = []
     test_loss_arr = []
-    for epoch in range(40):
+    for epoch in range(epoch_n):
         output = model(train_x)
         loss = loss_fun(output, train_y)
         optimizer.zero_grad()
